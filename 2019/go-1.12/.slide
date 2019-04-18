@@ -1,0 +1,319 @@
+Go 1.12
+What's new in Go
+30 Apr 2019
+
+Amine ,Gopher
+hello@amine.in
+https://amine.in
+@aminedotin
+
+* The language
+
+* The language
+
+- Changes to the language specification: None 
+- Does it have generics yet ? No.
+
+* Ports
+
+* Ports
+
+- Race detector now supported on linux/arm64.
+- support Windows 10 IoT Core on 32-bit ARM chips
+- cgo now supported on linux/ppc64.
+
+* Ports 
+
+- Enhacements to WebAssembly port (with some api breaking changes).
+- hurd reserved for the GNU/Hurd system for use with gccgo
+- libSystem is used when making syscalls on macOS and iOS. Can't use syscall.Getdirentries on iOS.
+
+* Ports
+
+Last release to support:
+
+- FreeBSD 10.x; Go 1.13 will require FreeBSD 11.2+ or 12.0+
+- macOS 10.10 Yosemite. Go 1.13 will require macOS 10.11 El Capitan or later.
+
+* Runtime
+
+* Runtime
+
+- Significantly improved performance of sweeping when a large fraction of the heap remains live, reducing allocation latency right after a GC.
+- Releases memory back to OS more aggressively, especially after large allocations that can't reuse existing heap space.
+- Timer and deadline code is faster and scales better with higher numbers of CPUs, improving performance of manipulating network connection deadlines.
+
+* Runtime
+
+- On Linux, uses MADV_FREE advice to release unused memory; more efficient but may result in higher reported RSS.
+- cpu.extension=off for GODEBUG to disable the use of optional CPU instruction set extensions in the standard library and runtime.
+- Stopped overcounting large heap allocations, resulting in improved accuracy of memory profiles.
+
+* Modules
+
+* Modules
+
+before Go 1.11
+
+- everything relied on $GOPATH
+- dep: official dependency management tool for Go
+
+introduced in Go 1.11 
+
+- GO111MODULE=auto
+- Will cause go to use modules when you're outside of the $GOPATH
+
+in Go 1.12
+
+- GO111MODULE=on is the default
+- Go version is added to the *go.mod* file
+- Causes build with Go 1.11.3 or less to fail
+- dep is still maintained
+
+* Modules
+
+- go commands that download and extract modules are now safe to invoke concurrently.
+
+- The module cache (`GOPATH/pkg/mod`) must reside in a filesystem that supports file locking.
+
+* Modules
+
+    # initiliaze module
+    go mod init github.com/org/repo
+
+    # disable go module
+    export GO111MODULE=off
+
+    # add missing and remove unused modules
+    go mod tidy
+
+    # verify dependencies
+    go mod verify
+
+    # create a vendored copy of dependencies
+    go mod vendor
+
+    # support go 1.11
+    go mod edit -go=1.11.
+
+* Modules
+
+Athens: An experimental Go module datastore and proxy (github.com/gomods/athens)
+
+A public version is already available
+
+- export GOPROXY="https://athens.azurefd.net"
+
+* TLS 1.3
+
+* TLS 1.3
+
+.image ./images/tls-handshake.png
+
+* TLS 1.3
+
+TLS 1.2 (and earlier)
+
+- New Connection: 4 RTT + DNS
+- Resumed Connection: 3 RTT + DNS
+
+TLS 1.3
+
+- New Connection: 3 RTT + DNS
+- Resumed Connection: 3 RTT + DNS
+
+TLS 1.3 + 0-RTT (not implemented yet)
+
+- New Connection: 3 RTT + DNS
+- Resumed Connection: 2 RTT + DNS
+
+* TLS 1.3
+
+- Will be enabled by default in Go 1.13
+- export GODEBUG=tls13=1
+
+    import "crypto/tls"
+
+    func init() {
+        os.Setenv("GODEBUG", os.Getenv("GODEBUG")+",tls13=1")
+    }
+
+    // or
+
+    config := &tls.Config{
+        ...
+        MaxVersion: tls.VersionTLS13,
+    }
+
+    ...
+
+    conn, err := tls.Dial("tcp", "127.0.0.1:443", config)
+
+    ...
+
+
+* Standard library
+
+* Standard library
+- io
+- fmt
+- bytes
+- bufio
+- strings
+- net/...
+- math/...
+- image/...
+- crypto/...
+- database/sql
+- ...
+
+* Standard library
+io
+
+- new StringWriter interface
+
+    // StringWriter is the interface that wraps the WriteString method.
+    type StringWriter interface {
+            WriteString(s string) (n int, err error)
+    }
+
+    ...
+
+    from https://golang.org/src/io/io.go?s=9876:9949#L272
+
+    func WriteString(w Writer, s string) (n int, err error) {
+        if sw, ok := w.(StringWriter); ok {
+            return sw.WriteString(s)
+        }
+        return w.Write([]byte(s))
+    }
+
+* Standard library
+fmt
+
+- Maps are now printed in key-sorted order to ease testing.
+
+    import "fmt"
+
+    ...
+        m := map[string]int{"z": 3, "a": 2}
+        fmt.Printf("sorted map: %v", m)
+    ...
+
+    // sorted map: map[a:2 z:3]
+
+    func checkAsStrings(a,b interface{}) bool {
+    return fmt.Sprintf("%v", a) != fmt.Sprintf("%v", b) 
+    }
+
+    //...
+    if checkAsStrings(got, c.want) {
+    t.Errorf("Case #%v: Wanted: %v, got: %v", i, c.want, got)
+    }
+
+
+* Standard library
+strings, bytes
+
+- new Replace function
+
+    package main
+
+    import (
+        "bytes"
+        "fmt"
+    )
+
+    func main() {
+        fmt.Printf("%s\n", bytes.ReplaceAll([]byte("oink oink oink"), []byte("oink"), []byte("moo")))
+    }
+
+    // moo moo moo
+
+* Standard library
+bufio
+
+- Reader's UnreadRune and UnreadByte methods will now return an error if they are called after Peek.
+
+    // todo
+
+* Standard library
+expvar
+
+- The new Delete method allows for deletion of key/value pairs from a Map.
+
+    // todo
+
+* Standard library
+crypto/rand
+
+- A warning will now be printed to standard error the first time Reader.Read is blocked for more than 60 seconds waiting to read entropy from the kernel.
+- On FreeBSD, Reader now uses the getrandom system call if available, /dev/urandom otherwise.
+
+* Standard library
+
+crypto/rc4
+
+- This release removes the assembly implementations, leaving only the pure Go version. The Go compiler generates code that is either slightly better or slightly worse, depending on the exact CPU. RC4 is insecure and should only be used for compatibility with legacy systems.
+
+crypto/tls
+
+- If a client sends an initial message that does not look like TLS, the server will no longer reply with an alert, and it will expose the underlying net.Conn in the new field Conn of RecordHeaderError.
+
+* Standard library
+net/url
+- Parse, ParseRequestURI, and URL.Parse now return an error for URLs containing ASCII control characters, which includes NULL, tab, and newlines.
+
+net/http/httputil
+- The ReverseProxy now automatically proxies WebSocket requests.
+
+* Standard library
+syscall
+
+- 64-bit inodes are now supported on FreeBSD 12. Some types have been adjusted accordingly.
+- The Unix socket (AF_UNIX) address family is now supported for compatible versions of Windows.
+- The new function Syscall18 has been introduced for Windows, allowing for calls with up to 18 arguments.
+
+* Standard library
+syscall/js
+
+- The Callback type and NewCallback function have been renamed; they are now called Func and FuncOf, respectively.
+- This is a breaking change, but WebAssembly support is still experimental and not yet subject to the Go 1 compatibility promise. 
+
+* Toolchain
+
+* Toolchain
+
+go vet tool
+
+    go tool vet ./...
+
+changed to
+
+    go vet ./...
+
+tour
+
+- go tour -> tour
+
+doc
+
+- godoc -> go doc
+
+* Toolchain
+
+Build cache requirement:
+
+- The build cache is now required. A step toward eliminating $GOPATH/pkg.
+- Setting the environment variable GOCACHE=off will cause go commands that write to the cache to fail.
+
+* Toolchain
+
+Cgo:
+
+- C type EGLDisplay will be translated to the Go type uintptr.
+- Mangled C names are no longer accepted in packages that use cgo. For example, use the documented cgo name C.char rather than the mangled name _Ctype_char.
+
+* Toolchain
+
+- go test -benchmark -benchtime=100x
