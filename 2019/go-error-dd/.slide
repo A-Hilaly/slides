@@ -1,0 +1,485 @@
+Go 2 errors
+New error design
+
+Amine, Gopher
+hello@amine.in
+https://amine.in
+@aminedotin
+
+* Go error model
+
+* Go error model
+
+Errors can happen in each stage of the creation and execution of a program.
+
+    Error handling refers to the anticipation, detection, and resolution of
+    programming, application, and communications errors.
+
+
+* Go error model
+
+- No exceptions. 
+- Errors are values.
+- Inspired from C
+        // remember this ?
+        #include <errno.h>
+        /**
+            EPERM 1 Operation not permitted
+            ENOENT 2 No such file or directory
+            ESRCH 3 No such process
+            EINTR 4 Interrupted system call
+            EIO 5 Input/output error
+        */
+        
+        //but not even close
+        
+
+* Go error model
+
+- It’s idiomatic to communicate errors via a separate return value.
+- A nil value in the error position indicates that there was no error.
+
+* Go error model
+
+From the *os* package, os.Open:
+
+    func Open(name string) (file *File, err error)
+
+And in usage it looks something like this:
+
+    f, err := os.Open("filename.ext")
+    if err != nil {
+        log.Fatal(err)
+    }
+    // do something with the open *File f
+
+Standard library is full of interesting examples. It's always worth to dive into it.
+
+* Go error model
+
+- The builtin type *error* is just an interface
+
+    type error interface {
+        Error() string
+    }
+
+- You can create your own errors !
+
+    type simpleError struct {
+        code    int
+        message string
+    }
+
+    func (e *simpleError) Error() string {
+        return fmt.Sprintf("can't do action abc %d: %s", code, message)
+    }
+
+
+* Go error model
+
+    ...
+
+    func firstElement(a []string) (string, error) {
+        if len(a) == 0 {
+            return "", &simpleError{
+                code:    500,
+                message: "given array is empty",
+            }
+        }
+        return a[0], nil
+    }
+
+* Go error checking
+
+* Go error checking
+
+- Checking errors
+
+        if err := doJob(...); err != nil {
+            log.Panic(err)
+        }
+
+        if result, data, err := doAnotherJob(...); err != nil {
+            log.Panic(err)
+        }
+
+* Go error checking
+
+- Errors are values
+
+    _, err = fd.Write(p0[a:b])
+    if err != nil {
+        return err
+    }
+
+    _, err = fd.Write(p1[c:d])
+    if err != nil {
+        return err
+    }
+
+    _, err = fd.Write(p2[e:f])
+    if err != nil {
+        return err
+    }
+
+    // and so on
+
+* Go error checking
+
+.image ./images/mat-ryer.png _ 800
+
+* Error handling
+
+* Error handling
+
+.image ./images/go-proverb.png _ 800
+
+* Error handling
+
+more than just
+
+    if err != nil {
+        return err
+    }
+
+you also use some standard library functions
+
+    if os.IsNotExist(err) {
+        // ... handle error
+    } else if os.IsPermission(err) {
+        // ... handle error
+    } else {
+        return err
+    }
+
+or create your own ...
+
+* Error handling
+
+wrapping errors
+
+    func ... {
+        if err != nil {
+            return &WriteError{Database: "users", Err: err}
+        }
+    }
+
+and check for an error implementation
+
+    switch err.(type) {
+    WriteError:
+        // handle 
+
+    HTTPError:
+        // handle
+
+    default:
+        // handle
+    }
+
+* The problem
+
+* The problem
+
+- hypothetical dialect of Go with exceptions
+
+    func CopyFile(src, dst string) throws error {
+        r := os.Open(src)
+        defer r.Close()
+
+        w := os.Create(dst)
+        io.Copy(w, r)
+        w.Close()
+    }
+
+* The problem
+
+- Translation to Go code
+
+    func CopyFile(src, dst string) error {
+        r, err := os.Open(src)
+        if err != nil {
+            return err
+        }
+        defer r.Close()
+
+        w, err := os.Create(dst)
+        if err != nil {
+            return err
+        }
+        defer w.Close()
+
+        if _, err := io.Copy(w, r); err != nil {
+            return err
+        }
+        if err := w.Close(); err != nil {
+            return err
+        }
+    }
+
+* The problem
+
+    //Correct and everything but elegant
+    func CopyFile(src, dst string) error {
+        r, err := os.Open(src)
+        if err != nil {
+            return fmt.Errorf("copy %s %s: %v", src, dst, err)
+        }
+        defer r.Close()
+
+        w, err := os.Create(dst)
+        if err != nil {
+            return fmt.Errorf("copy %s %s: %v", src, dst, err)
+        }
+
+        if _, err := io.Copy(w, r); err != nil {
+            w.Close()
+            os.Remove(dst)
+            return fmt.Errorf("copy %s %s: %v", src, dst, err)
+        }
+
+        if err := w.Close(); err != nil {
+            os.Remove(dst)
+            return fmt.Errorf("copy %s %s: %v", src, dst, err)
+        }
+    }
+
+* The problem
+
+- This is fine.
+
+.image ./images/this-is-fine.jpg _ 800
+
+* Go 2 error design
+
+* Go 2 error design
+
+for error handling, introduction of two new syntatic forms:
+
+- *check*
+- *handle*
+
+* Go 2 error design
+
+Consider the following code
+
+    func main() {
+        hex, err := ioutil.ReadAll(os.Stdin)
+        if err != nil {
+            log.Fatal(err)
+        }
+
+        data, err := parseHexdump(string(hex))
+        if err != nil {
+            log.Fatal(err)
+        }
+
+        os.Stdout.Write(data)
+    }
+
+* Go 2 error design
+
+Can be written
+
+    func main() {
+        handle err {
+            log.Fatal(err)
+        }
+
+        hex := check ioutil.ReadAll(os.Stdin)
+        data := check parseHexdump(string(hex))
+        os.Stdout.Write(data)
+    }
+
+* Go 2 error design
+
+
+Default handler
+
+    func printSum(a, b string) error {
+        x := check strconv.Atoi(a)
+        y := check strconv.Atoi(b)
+        fmt.Println("result:", x + y)
+        return nil
+    }
+
+* Go 2 error design
+
+Can be defered !
+
+    func Greet(w io.WriteCloser) error {
+        defer func() {
+            check w.Close()
+        }()
+        fmt.Fprintf(w, "hello, world\n")
+        return nil
+    }
+
+* Go 2 error design
+
+handler chain
+
+    func handlerChain(err error) error {
+        return err
+    }
+
+// The handler chain is only presented here as a function to define its semantics; 
+
+    v1, ..., vN := check <expr>
+
+    // equivalent to
+
+    v1, ..., vN, vErr := <expr>
+    if vErr != nil {
+        <error result> = handlerChain(vn)
+        return
+    }
+
+* Go 2 error design
+
+Multiple handlers:
+
+    func process(user string, files chan string) (n int, err error) {
+        handle err { return 0, fmt.Errorf("process: %v", err)  }      // handler A
+        for i := 0; i < 3; i++ {
+            handle err { err = fmt.Errorf("attempt %d: %v", i, err) } // handler B
+            handle err { err = moreWrapping(err) }                    // handler C
+
+            check do(something())  // check 1: handler chain C, B, A
+        }
+        check do(somethingElse())  // check 2: handler chain A
+    }
+
+* Go 2 error design
+
+Custom errors
+
+    type Error struct {
+        Func string
+        User string
+        Path string
+        Err  error
+    }
+
+    func (e *Error) Error() string
+
+    func ProcessFiles(user string, files chan string) error {
+        e := Error{ Func: "ProcessFile", User: user}
+        handle err { e.Err = err; return &e } // handler A
+        u := check OpenUserInfo(user)         // check 1
+        defer u.Close()
+        for file := range files {
+            handle err { e.Path = file }       // handler B
+            check process(check os.Open(file)) // check 2
+        }
+        ...
+    }
+
+* Go 2 error design
+
+Variable shadowing
+
+    func SortContents(w io.Writer, files []string) error {
+        handle err {
+            return fmt.Errorf("process: %v", err)             // handler A
+        }
+
+        lines := []strings{}
+        for _, file := range files {
+            handle err {
+                return fmt.Errorf("read %s: %v ", file, err)  // handler B
+            }
+            scan := bufio.NewScanner(check os.Open(file))     // check runs B on error
+            for scan.Scan() {
+                lines = append(lines, scan.Text())
+            }
+            check scan.Err()                                  // check runs B on error
+        }
+        sort.Strings(lines)
+        for _, line := range lines {
+            check io.WriteString(w, line)                     // check runs A on error
+        }
+    }
+
+* Go 2 error design
+
+Considered Ideas:
+
+    check io.Copy(w, check newReader(foo))
+
+to
+
+    io.Copy(w, newReader(foo)?)?
+
+* Go 2 error design 
+
+mainly inspired from github.com/pkg/errors
+
+- Error inspection:
+
+    package errors
+
+    type Wrapper interface {
+        Unwrap() error
+    }
+
+- Error formatting
+
+    package errors
+
+    type Formatter interface {
+        Format(p Printer) (next error)
+    }
+
+* Go 2 error design
+
+Check:
+
+- For multi-valued expressions, check yields all but the last value as its result.
+- A check expression cannot be used inside handlers.
+
+Handle:
+
+- takes a single argument of type error
+- has the same return parameters as the enclosing function
+- executes one or more blocks, called handlers.
+
+* Other error designs
+
+* Other error designs
+
+- Prehistoric Go
+
+    type Error struct {
+        s string
+    }
+
+    func NewError(s string) *Error
+
+- In April 2009, we changed os.Error to be an interface:
+
+    // An Error can represent any printable error condition.
+    type Error interface {
+        String() string
+    }
+
+- In November 2011, as part of the lead-up to Go 1
+
+    type error interface {
+        Error() string
+    }
+
+* Other Go Designs
+
+- github.com/spacemonkeygo/errors
+- github.com/juju/errgo
+- gopkg.in/errgo.v1 and gopkg.in/errgo.v2
+- github.com/hashicorp/errwrap
+- github.com/pkg/errors
+- upspin.io/error
+
+* Comparisons
+
+- Rust: Rust originally defined try!
+- C++: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0709r0.pdf
+- Swift: Swift defines a try keyword with somewhat similar semantics to the check keyword introduced here. 
