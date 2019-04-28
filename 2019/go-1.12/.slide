@@ -1,6 +1,5 @@
 Go 1.12
 What's new in Go
-30 Apr 2019
 
 Amine ,Gopher
 hello@amine.in
@@ -11,8 +10,17 @@ https://amine.in
 
 * The language
 
-- Changes to the language specification: None 
+- Changes to the language specification: None. 
 - Does it have generics yet ? No.
+
+* The release
+
+- Go 1.12 released the 26th of february
+- In Mai/June we will enter the release freeze for Go 1.13
+
+* The release
+
+.image ./images/brad-approved.png _ 800
 
 * Ports
 
@@ -24,7 +32,7 @@ https://amine.in
 
 * Ports 
 
-- Enhacements to WebAssembly port (with some api breaking changes).
+- Enhacements to WebAssembly port (with some API breaking changes).
 - hurd reserved for the GNU/Hurd system for use with gccgo
 - libSystem is used when making syscalls on macOS and iOS. Can't use syscall.Getdirentries on iOS.
 
@@ -55,13 +63,13 @@ Last release to support:
 
 before Go 1.11
 
-- everything relied on $GOPATH
-- dep: official dependency management tool for Go
+- everything relied on *$GOPATH*
+- *dep*: official dependency management tool for Go
 
 introduced in Go 1.11 
 
-- GO111MODULE=auto
-- Will cause go to use modules when you're outside of the $GOPATH
+- $GO111MODULE=auto #on/off
+- Supports modules when you're outside of the $GOPATH
 
 in Go 1.12
 
@@ -69,6 +77,10 @@ in Go 1.12
 - Go version is added to the *go.mod* file
 - Causes build with Go 1.11.3 or less to fail
 - dep is still maintained
+
+* Modules
+
+.image ./images/modules.png 500 _
 
 * Modules
 
@@ -103,6 +115,13 @@ Athens: An experimental Go module datastore and proxy (github.com/gomods/athens)
 A public version is already available
 
 - export GOPROXY="https://athens.azurefd.net"
+
+* Modules 
+
+Interested in learning more ?
+- dotGo 2019 - Jean de Klerk - Multi-Module Repositories
+- https://blog.golang.org/modules2019
+- https://github.com/golang/go/wiki/Modules
 
 * TLS 1.3
 
@@ -235,14 +254,32 @@ bufio
 
 - Reader's UnreadRune and UnreadByte methods will now return an error if they are called after Peek.
 
-    // todo
+        ... 
+        b := bytes.NewReader([]byte("hello world"))
+        r := bufio.NewReader(b)
+        _, _ = r.Peek(5)
+        if err := r.UnreadByte(); err != nil {
+            panic(err)
+        }
+        // Notably, Peek is not considered a read operation.
 
 * Standard library
 expvar
 
 - The new Delete method allows for deletion of key/value pairs from a Map.
 
-    // todo
+    // Deletes the given key from the map.
+    func (v *Map) Delete(key string) {
+        v.keysMu.Lock()
+        defer v.keysMu.Unlock()
+        
+        i := sort.SearchStrings(v.keys, key)
+        if i < len(v.keys) && key == v.keys[i] {
+            v.keys = append(v.keys[:i], v.keys[i+1:]...)
+            v.m.Delete(key)
+        }
+    }
+
 
 * Standard library
 crypto/rand
@@ -287,18 +324,20 @@ syscall/js
 go vet tool
 
     go tool vet ./...
-
-changed to
-
+    # changed to
     go vet ./...
 
 tour
 
-- go tour -> tour
+    go tour
+    # changed to
+    tour
 
 doc
 
-- godoc -> go doc
+    godoc
+    # changed to
+    go doc
 
 * Toolchain
 
