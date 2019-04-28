@@ -1,6 +1,9 @@
 VERSION=v1
 TAG=ahilaly/slides:$(VERSION)
 
+dev:
+	present -notes -http=0.0.0.0:3999
+
 build:
 	docker build -t $(TAG) .
 
@@ -15,4 +18,4 @@ run:
 		$(TAG) \
 		present \
 		-notes \
-		-http=0.0.0.0:3999 
+		-http=0.0.0.0:3999
