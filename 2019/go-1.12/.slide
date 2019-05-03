@@ -6,21 +6,33 @@ hello@amine.in
 https://amine.in
 @aminedotin
 
+* Go 1.12
+
+* Agenda
+
+Changes since Go 1.11:
+
+- The Language
+- The Ports
+- The Runtime
+- The Standard Library
+- The Tooling
+
+* Go 1.12
+
+- Go 1.12 released the 26th of february
+- In Mai/June we will enter the release freeze for Go 1.13
+
+* Go 1.12
+
+.image ./images/brad-approved.png _ 800
+
 * The language
 
 * The language
 
 - Changes to the language specification: None. 
 - Does it have generics yet ? No.
-
-* The release
-
-- Go 1.12 released the 26th of february
-- In Mai/June we will enter the release freeze for Go 1.13
-
-* The release
-
-.image ./images/brad-approved.png _ 800
 
 * Ports
 
@@ -47,13 +59,11 @@ Last release to support:
 
 * Runtime
 
-- Significantly improved performance of sweeping when a large fraction of the heap remains live, reducing allocation latency right after a GC.
 - Releases memory back to OS more aggressively, especially after large allocations that can't reuse existing heap space.
 - Timer and deadline code is faster and scales better with higher numbers of CPUs, improving performance of manipulating network connection deadlines.
 
 * Runtime
 
-- On Linux, uses MADV_FREE advice to release unused memory; more efficient but may result in higher reported RSS.
 - cpu.extension=off for GODEBUG to disable the use of optional CPU instruction set extensions in the standard library and runtime.
 - Stopped overcounting large heap allocations, resulting in improved accuracy of memory profiles.
 
@@ -110,6 +120,16 @@ in Go 1.12
 
 * Modules
 
+.image ./images/brad-gomod.png 500 _
+
+* Modules
+
+Developpers can start alpha testing the official Go module mirror, index, and checksum database !
+
+- export GOPROXY=https://proxy.golang.org
+
+* Modules
+
 Athens: An experimental Go module datastore and proxy (github.com/gomods/athens)
 
 A public version is already available
@@ -122,8 +142,18 @@ Interested in learning more ?
 - dotGo 2019 - Jean de Klerk - Multi-Module Repositories
 - https://blog.golang.org/modules2019
 - https://github.com/golang/go/wiki/Modules
+- https://groups.google.com/forum/#!topic/golang-dev/go6_lZqew6g
 
 * TLS 1.3
+
+* TLS 1.3
+
+- TLS 1.3 was defined in RFC 8446 in August 2018.
+- based on the earlier TLS 1.2 specification
+- Removing support for weak and lesser-used named elliptic curves
+- Removing support for MD5 and SHA 224
+- Supporting 1-RTT handshakes and initial support for 0-RTT
+- ...
 
 * TLS 1.3
 
@@ -221,13 +251,13 @@ fmt
 
     // sorted map: map[a:2 z:3]
 
-    func checkAsStrings(a,b interface{}) bool {
-    return fmt.Sprintf("%v", a) != fmt.Sprintf("%v", b) 
+    func checkAsStrings(a, b interface{}) bool {
+        return fmt.Sprintf("%v", a) != fmt.Sprintf("%v", b) 
     }
 
     //...
     if checkAsStrings(got, c.want) {
-    t.Errorf("Case #%v: Wanted: %v, got: %v", i, c.want, got)
+        t.Errorf("Case #%v: Wanted: %v, got: %v", i, c.want, got)
     }
 
 
@@ -261,6 +291,7 @@ bufio
         if err := r.UnreadByte(); err != nil {
             panic(err)
         }
+        
         // Notably, Peek is not considered a read operation.
 
 * Standard library
